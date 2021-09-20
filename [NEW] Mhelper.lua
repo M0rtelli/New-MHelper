@@ -54,11 +54,13 @@
     local Matrix3X3 = require "matrix3x3"
     local Vector3D = require "vector3d"
     local render = require 'lib.render'
+	local copas = require 'copas'
+	local http = require 'copas.http'
     imgui.ToggleButton = require('imgui_addons').ToggleButton
     encoding.default = 'CP1251'
     u8 = encoding.UTF8 
 	script_name('MHelper')
-	script_version('1.0')
+	script_version('1.2')
 
 -----------[[[[    ПЕРЕМЕННЫЕ    ]]]]-----------
     local main_window_state = imgui.ImBool(false)
@@ -71,8 +73,14 @@
 	local check_script = imgui.ImBool(false)
     local getBonePosition = ffi.cast("int (__thiscall*)(void*, float*, int, bool)", 0x5E4280)
     local tSelButtons = { "Основное", "Связь с разработчиком", "Информация" }
+	local navigation = {
+		current = 1,
+		list = { "Home", "Settings", "Misc", "Donate", "About" }
+	}
+	
     local sWindows = tSelButtons[1]
-    local font1 = renderCreateFont("Tahoma", 13, 8)
+    local font_e = renderCreateFont("Tahoma", 10, 4)
+	local font1 = renderCreateFont("Tahoma", 13, 8)
     local selectable = 0
     local player_spec = ''
     local veh_spec = ''
@@ -114,7 +122,11 @@
                 admin_lvl = 1,
                 auth_inter = 0,
                 auth_ld = 0,
-				password_of_script = ''
+				password_of_script = '',
+				auth_skin = 0,
+				auth_inter = 0,
+				auth_ld = 0
+				
             }
         }
 		
@@ -147,6 +159,7 @@
 	local Zinput = imgui.ImBuffer(256)
 	local intInput = imgui.ImBuffer(256)
 	local nameint = imgui.ImBuffer(256)
+	local bug = imgui.ImBuffer(256)
 	local login_script = imgui.ImBuffer(256)
 	local password_script = imgui.ImBuffer(256)
 	local ip_info = imgui.ImBuffer(512)
@@ -178,7 +191,7 @@
             createDirectory('moonloader\\config\\MHelper\\Config') -- [[ Создаем директорию скрипта ]]
             inicfg.save(main_cfg, 'MHelper\\Config\\main_config.ini') 
         end
-		autoupdate()
+		autoupdate("https://gist.githubusercontent.com/M0rtelli/3304b678f3bf0b05fd3487ba25cad5cc/raw", '{00FFFF}[MHelper]: ', "https://github.com/M0rtelli/New-MHelper/blob/main/%5BNEW%5D%20Mhelper.lua")
 		check_account()
 
         ---------[[[[ КОМАНДЫ ]]]]---------
@@ -224,7 +237,7 @@
                 if wasKeyPressed(69) and main_config.amenu_config.emenu and not sampIsChatInputActive() and not sampIsDialogActive() and is_script_auth then
                     while isKeyDown(69) do
                         wait(0)
-                        sampToggleCursor(1)
+                        --[[sampToggleCursor(1)
                         for id = 0, sampGetMaxPlayerId(true) do
                             if sampIsPlayerConnected(id) then
                             local exists, handle = sampGetCharHandleBySampPlayerId(id)
@@ -254,9 +267,45 @@
                                     end
                                 end
                             end
-                        end
+                        end]]
+						local player = getNearCharToCenter(150)
+						local x, y = getScreenResolution()
+						if player then
+							local _, playerId = sampGetPlayerIdByCharHandle(player)
+							local nick = sampGetPlayerNickname(playerId)
+							local health = getCharHealth(player)
+							local armour = getCharArmour(player)
+							renderFigure2D(x/2, y/2, 75, 160, 0xFFFFFFFF) -- нарисует круг с белой обводкой
+							local plX, plY, plZ = getBodyPartCoordinates(8, player)
+							local plsX, plsY = convert3DCoordsToScreen(plX, plY, plZ)
+							renderDrawLine(x/2, y/2, plsX, plsY, 2.0, 0xFFFFFFFF)
+							renderFontDrawText(font_e, '{FF0000}1{EEEEEE} - Войти в наблюдение', (x/2)+175, (y/2)-100, 0xEEEEEEEE)
+							renderFontDrawText(font_e, '{FF0000}2{EEEEEE} - Слапнуть', (x/2)+175, (y/2)-75, 0xEEEEEEEE)
+							renderFontDrawText(font_e, '{FF0000}3{EEEEEE} - Заспавнить', (x/2)+175, (y/2)-50, 0xEEEEEEEE)
+							renderFontDrawText(font_e, nick .. '[' .. playerId .. ']', plsX-75, plsY, 0xFFFF0000)
+							renderFontDrawText(font_e, 'HP: {FF0000}' .. health .. '{EEEEEE} | Arm: {FF0000}' .. armour .. '{EEEEEE}', (x/2)-70, (y/2)+175, 0xEEEEEEEE)
+							renderDrawPolygon(x/2, y/2, 10, 10, 8, 0, 0xFFB3FF00)
+							renderDrawPolygon(plsX, plsY, 7, 7, 5, 0, 0xFFB3FF00)
+
+							if isKeyJustPressed(VK_1) then
+								sampSendChat('/sp ' .. playerId)
+							end
+
+							if isKeyJustPressed(VK_2) then
+								sampSendChat('/slap ' .. playerId)
+							end
+
+							if isKeyJustPressed(VK_3) then
+								if admin_lvl.v >= 3 then
+									sampSendChat('/spawn ' .. playerId)
+								else
+									sampSendChat('/a /spawn ' .. playerId)
+								end
+							end
+
+						end
+						
                     end
-                    if wasKeyReleased(69) then sampSetCursorMode(0) end
                 end
             -- CLICK WARP
 
@@ -387,6 +436,7 @@
 		serial = ffi.new("unsigned long[1]", 0)
 		ffi.C.GetVolumeInformationA(nil, nil, 0, serial, nil, nil, nil, 0)
 		serial = tostring(serial[0])
+		info_msg(serial)
 		login_script.v = tostring(serial)
 		get_gist("https://gist.githubusercontent.com/M0rtelli/52b47f5f6cd4c4f52ea27a398572b8af/raw", '{00FFFF}[MHelper]: ')
 	end
@@ -410,6 +460,9 @@
 				if main_config.amenu_config.password_of_script == password_script_from_json then
 					if main_config.amenu_config.password_of_script ~= '' then
 						is_script_auth = true
+					else
+						check_script.v = not check_script.v
+						imgui.Process = check_script.v
 					end
 				else
 					check_script.v = not check_script.v
@@ -426,7 +479,7 @@
 		end
 	  )
 	
-end
+	end
 
 	function autoupdate(json_url, prefix, url)
 	  local dlstatus = require('moonloader').download_status
@@ -456,7 +509,7 @@ end
 						elseif status1 == dlstatus.STATUS_ENDDOWNLOADDATA then
 						  print('Загрузка обновления завершена.')
 						  sampAddChatMessage((prefix..'Обновление завершено!'), color)
-						  imgui.ShowCursor = not imgui.ShowCursor
+						  imgui.ShowCursor = false
 						  goupdatestatus = true
 						  lua_thread.create(function() wait(500) thisScript():reload() end)
 						end
@@ -487,6 +540,14 @@ end
 	end
 	
 -----------[[[[    fucked IMGUI    ]]]]-----------
+
+	local fontsize = nil
+	function imgui.BeforeDrawFrame()
+		if fontsize == nil then
+			fontsize = imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\trebucbd.ttf', 24.0, nil, imgui.GetIO().Fonts:GetGlyphRangesCyrillic()) -- вместо 30 любой нужный размер
+		end
+	end
+
     function imgui.OnDrawFrame()
         local so, sp = getScreenResolution()
 		local entered_text = sampGetCurrentDialogEditboxText()
@@ -504,26 +565,41 @@ end
             bluetheme()
             imgui.SetNextWindowPos(imgui.ImVec2(so / 4, sp / 5), imgui.Cond.Once)
             imgui.SetNextWindowSize(imgui.ImVec2(800, 500))
-            imgui.Begin(u8'Admin Menu || dev: Dexter_Martelli', main_window_state)
+            imgui.Begin(u8'Admin Menu || dev: Martelli corp. ©', main_window_state)
             imgui.BeginGroup()
-                imgui.BeginChild('##кнопки', imgui.ImVec2(190, 460), true)
-                    for _, nButton in pairs(tSelButtons) do
+                --imgui.BeginChild('##кнопки', imgui.ImVec2(190, 460), true)
+                    --[[for _, nButton in pairs(tSelButtons) do
                         if imgui.SelButton(sWindows == nButton, u8(nButton), imgui.ImVec2(170, 40)) then 
                             sWindows = nButton
                         end
-                    end
-                imgui.EndChild()
+                    end]]
+					
+                --imgui.EndChild()
             imgui.EndGroup()
+			local width = imgui.GetWindowWidth()
+    		imgui.SetCursorPosX(185)
+			imgui.PushFont(fontsize)
+				for i, title in ipairs(navigation.list) do
+					if HeaderButton(navigation.current == i, title) then
+						navigation.current = i
+					end
+					if i ~= #navigation.list then
+						imgui.SameLine(nil, 30)
+					end
+				end
+			imgui.PopFont()
+			--	imgui.Separator()
+            --imgui.SameLine()
+            imgui.BeginChild('##render', imgui.ImVec2(780, 428), true)
+			
 
-            imgui.SameLine()
-            imgui.BeginChild('##render', imgui.ImVec2(590, 460), true)
-                if sWindows == tSelButtons[1] then
+                if navigation.current == 1 then
                     imgui_main()
                 end
-                if sWindows == tSelButtons[2] then
+                if navigation.current == 2 then
                     imgui_support()
                 end
-                if sWindows == tSelButtons[3] then
+                if navigation.current == 3 then
                     imgui_info()
                 end
             imgui.EndChild()
@@ -634,7 +710,7 @@ end
             imgui.SetNextWindowSize(imgui.ImVec2(600, 100))
             imgui.Begin(u8'Admin Menu || dev: Dexter_Martelli', recon_menu, imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoResize)
             if imgui.CustomButton(u8'<< Back', imgui.ImVec4(0.0,0.0,0.0,2.0), imgui.ImVec4(1.0,0.0,1.0,1.0), imgui.ImVec4(1.0,0.0,1.0,1.0), imgui.ImVec2(75, 23)) then
-                sampSendChat('/sp ' .. player_spec - 1)
+                sampSendChat('/sp ' .. tonumber(player_spec) - 1)
             end
                 imgui.SameLine()
 
@@ -672,7 +748,7 @@ end
             end
             imgui.SameLine()
             if imgui.CustomButton(u8'Next >>', imgui.ImVec4(0.0,0.0,0.0,2.0), imgui.ImVec4(1.0,0.0,1.0,1.0), imgui.ImVec4(1.0,0.0,1.0,1.0), imgui.ImVec2(75, 23)) then
-                sampSendChat('/sp ' .. player_spec + 1)
+                sampSendChat('/sp ' .. tonumber(player_spec) + 1)
             end
             
             if veh_spec ~= '' then
@@ -739,9 +815,24 @@ end
 			
 			if imgui.Button(u8'ТП к игроку', imgui.ImVec2(75, 23)) then
                     lua_thread.create(function()
-						sampSendChat('/spoff')
-						wait(650)
-						sampSendChat('/goto ' .. player_spec)
+						if admin_lvl.v >= 2 then
+							sampSendChat('/spoff')
+							wait(650)
+							sampSendChat('/goto ' .. player_spec)
+						else
+							sampSendChat('/spoff')
+							wait(650)
+							local _, handle = sampGetCharHandleBySampPlayerId(player_spec)
+							local x, y, z = getCharCoordinates(handle)
+							local interior = getCharActiveInterior(handle)
+							setCharInterior(PLAYER_PED,interior_id)
+							setInteriorVisible(interior_id)
+							clearExtraColours(true)
+							requestCollision(x,y)
+							loadScene(x,y,z)
+							activateInteriorPeds(true)
+							teleport(x, y, z)
+						end
 					end)
 					
             end
@@ -954,130 +1045,146 @@ end
 	end
 
 	function report_imgui()
-	style_ans()
-	if sampGetPlayerIdByNickname(nick_report) then
-		imgui.CenterText(u8"Жалоба/Вопрос от " .. nick_report .. '[' .. sampGetPlayerIdByNickname(nick_report) .. ']:')
-	else
-		imgui.CenterText(u8"Жалоба/Вопрос от " .. nick_report .. '[OFF]:')
-	end
-	imgui.Separator()
-	if imgui.CustomButton(u8(question_report), imgui.ImVec4(0.0,0.0,0.0,2.0), imgui.ImVec4(1.0,0.0,1.0,1.0), imgui.ImVec4(1.0,0.0,1.0,1.0), imgui.ImVec2(435, 25)) then
-		dialog_status = not dialog_status
-		enableDialog(dialog_status)
-	end
-	
-	if not dialog_status then
-		enableDialog(dialog_status)
-	end
-	
-	imgui.Separator()
-	imgui.PushItemWidth(390)
-	imgui.InputText(u8'##response', answer)
-	imgui.PopItemWidth()
-	
-	imgui.SameLine()
-	imgui.Text(u8'Ответ')
-	if imgui.IsItemClicked(0) then -- Если нажмет ПКМ на текст
-        lua_thread.create(function()
-				dialog_status = true
-				enableDialog(true)
-				sampSendDialogResponse(id_dialog_report, 1, -1, tostring(u8:decode(answer.v)))
-				wait(700)
-				report.v = not report.v
-		end)
-    end
-	
-	
-	if report_id ~= '' then 
-		imgui.Text(u8'Возможный ID - ') 
+		style_ans()
+		if sampGetPlayerIdByNickname(nick_report) then
+			imgui.CenterText(u8"Жалоба/Вопрос от " .. nick_report .. '[' .. sampGetPlayerIdByNickname(nick_report) .. ']:')
+		else
+			imgui.CenterText(u8"Жалоба/Вопрос от " .. nick_report .. '[OFF]:')
+		end
+		imgui.Separator()
+		if imgui.CustomButton(u8(question_report), imgui.ImVec4(0.0,0.0,0.0,2.0), imgui.ImVec4(1.0,0.0,1.0,1.0), imgui.ImVec4(1.0,0.0,1.0,1.0), imgui.ImVec2(435, 25)) then
+			dialog_status = not dialog_status
+			enableDialog(dialog_status)
+		end
+		
+		if not dialog_status then
+			enableDialog(dialog_status)
+		end
+		
+		imgui.Separator()
+		imgui.PushItemWidth(390)
+		imgui.InputText(u8'##response', answer)
+		imgui.PopItemWidth()
+		
 		imgui.SameLine()
-		if imgui.Button(report_id, imgui.ImVec2(30, 20)) then  
+		imgui.Text(u8'Ответ')
+		if imgui.IsItemClicked(0) then -- Если нажмет ПКМ на текст
 			lua_thread.create(function()
-				dialog_status = true
-				enableDialog(true)
-				sampSendDialogResponse(id_dialog_report, 1, -1, 'Здравствуйте ' .. nick_report .. '! Слежу за потенциальным нарушителем.')
-				wait(700)
-				
-				sampCloseCurrentDialogWithButton(0)
-				report.v = not report.v
-				sampSendChat('/sp ' .. report_id)
-				
+					dialog_status = true
+					enableDialog(true)
+					sampSendDialogResponse(id_dialog_report, 1, -1, tostring(u8:decode(answer.v)))
+					wait(700)
+					report.v = not report.v
+					dialog_status = false
 			end)
 		end
-	end
 		
-	
-	imgui.Separator()
-	
-	imgui.BeginChild(u8'##aboba', imgui.ImVec2(425, 130), false)
-	
-			if imgui.Button(u8"Слежу") then
-				lua_thread.create(function()
-					dialog_status = true
-					enableDialog(true)
-					sampSendDialogResponse(id_dialog_report, 1, -1, 'Здравствуйте ' .. nick_report .. '! Бегу к Вам на помощь!')
-					wait(700)
-					sampCloseCurrentDialogWithButton(0)
-					report.v = not report.v
-					sampSendChat('/sp ' .. sampGetPlayerIdByNickname(nick_report))
-				end)
-			end
-			
+		
+		if report_id ~= '' then 
+			imgui.Text(u8'Возможный ID - ') 
 			imgui.SameLine()
-			
-			if imgui.Button(u8"Переслать в /a") then
+			if imgui.Button(report_id, imgui.ImVec2(30, 20)) then  
 				lua_thread.create(function()
 					dialog_status = true
 					enableDialog(true)
-					sampSendDialogResponse(id_dialog_report, 1, -1, nil)
+					sampSendDialogResponse(id_dialog_report, 1, -1, 'Здравствуйте ' .. nick_report .. '! Слежу за потенциальным нарушителем.')
 					wait(700)
+					
 					sampCloseCurrentDialogWithButton(0)
 					report.v = not report.v
-					sampSendChat('/a [REPORT]: ' .. nick_report .. '[' .. sampGetPlayerIdByNickname(nick_report) .. ']: ' .. question_report)
+					sampSendChat('/sp ' .. report_id)
+					dialog_status = false
+					
 				end)
 			end
+		end
 			
-			imgui.SameLine()
-			
-			if imgui.Button(u8"Передать админу") then
-				lua_thread.create(function()
-					dialog_status = true
-					enableDialog(true)
-					sampSendDialogResponse(id_dialog_report, 1, -1, 'Здравствуйте ' .. nick_report .. ', передам. ')
-					wait(700)
-					sampCloseCurrentDialogWithButton(0)
+		
+		imgui.Separator()
+		
+		imgui.BeginChild(u8'##aboba', imgui.ImVec2(425, 130), false)
+		
+				if imgui.Button(u8"Слежу") then
+					lua_thread.create(function()
+						dialog_status = true
+						enableDialog(true)
+						sampSendDialogResponse(id_dialog_report, 1, -1, 'Здравствуйте ' .. nick_report .. '! Бегу к Вам на помощь!')
+						wait(700)
+						sampCloseCurrentDialogWithButton(0)
+						report.v = not report.v
+						if sampGetPlayerIdByNickname(nick_report) then
+							sampSendChat('/sp ' .. sampGetPlayerIdByNickname(nick_report))
+						end
+						dialog_status = false
+					end)
+				end
+				
+				imgui.SameLine()
+				
+				if imgui.Button(u8"Переслать в /a") then
+					lua_thread.create(function()
+						dialog_status = true
+						enableDialog(true)
+						sampSendDialogResponse(id_dialog_report, 1, -1, nil)
+						wait(700)
+						sampCloseCurrentDialogWithButton(0)
+						report.v = not report.v
+						if sampGetPlayerIdByNickname(nick_report) then
+							sampSendChat('/a [REPORT]: ' .. nick_report .. '[' .. sampGetPlayerIdByNickname(nick_report) .. ']: ' .. question_report)
+						else
+							sampSendChat('/a [REPORT]: ' .. nick_report .. '[OFF]: ' .. question_report)
+						end
+						dialog_status = false
+					end)
+				end
+				
+				imgui.SameLine()
+				
+				if imgui.Button(u8"Передать админу") then
+					lua_thread.create(function()
+						dialog_status = true
+						enableDialog(true)
+						sampSendDialogResponse(id_dialog_report, 1, -1, 'Здравствуйте ' .. nick_report .. ', передам. ')
+						wait(700)
+						sampCloseCurrentDialogWithButton(0)
+						report.v = not report.v
+						if sampGetPlayerIdByNickname(nick_report) then
+							sampSendChat('/a [REPORT]: ' .. nick_report .. '[' .. sampGetPlayerIdByNickname(nick_report) .. ']: ' .. question_report)
+						else
+							sampSendChat('/a [REPORT]: ' .. nick_report .. '[OFF]: ' .. question_report)
+						end
+						dialog_status = false
+					end)
+				end
+				
+				imgui.SameLine()
+				
+				if imgui.Button(u8"Помощь по GPS") then
 					report.v = not report.v
-					sampSendChat('/a [REPORT]: ' .. nick_report .. '[' .. sampGetPlayerIdByNickname(nick_report) .. ']: ' .. question_report)
-				end)
-			end
-			
-			imgui.SameLine()
-			
-			if imgui.Button(u8"Помощь по GPS") then
-				report.v = not report.v
-				gps_help.v = not gps_help.v
-				imgui.Process = gps_help.v
-			end
-			
-			if imgui.Button(u8"Не согласен") then
-				lua_thread.create(function()
-					dialog_status = true
-					enableDialog(true)
-					sampSendDialogResponse(id_dialog_report, 1, -1, 'Здравствуйте, если Вы не согласны с наказанием - оставьте жалобу на форум. ')
-					wait(700)
-					sampCloseCurrentDialogWithButton(0)
-					report.v = not report.v
-				end)
-			end
-	
-	imgui.EndChild()
+					gps_help.v = not gps_help.v
+					imgui.Process = gps_help.v
+				end
+				
+				if imgui.Button(u8"Не согласен") then
+					lua_thread.create(function()
+						dialog_status = true
+						enableDialog(true)
+						sampSendDialogResponse(id_dialog_report, 1, -1, 'Здравствуйте, если Вы не согласны с наказанием - оставьте жалобу на форум. ')
+						wait(700)
+						sampCloseCurrentDialogWithButton(0)
+						report.v = not report.v
+						dialog_status = false
+					end)
+				end
+		
+		imgui.EndChild()
 	
 	end
 
     function imgui_main()
         local _, my_id = sampGetPlayerIdByCharHandle(PLAYER_PED)
         local my_nick = sampGetPlayerNickname(my_id)
-        imgui.BeginChild('##main_frame', imgui.ImVec2(245, 440), false)
+        imgui.BeginChild('##main_frame', imgui.ImVec2(245, 385), false)
 
             imgui.Text(u8'Ваш ник: ' .. my_nick .. '[' .. my_id ..']')
 
@@ -1166,8 +1273,8 @@ end
         imgui.EndChild()
 
             imgui.SameLine()
-
-        imgui.BeginChild('##sec_frame', imgui.ImVec2(245, 440), false)
+			imgui.SetCursorPosX(375)
+        imgui.BeginChild('##sec_frame', imgui.ImVec2(245, 375), false)
             imgui.Text(u8'Пароль адм. панели:')
                 imgui.SameLine()
                 if imgui.InputText('##pass adm', password_adm, imgui.InputTextFlags.Password) then
@@ -1195,11 +1302,21 @@ end
                     main_config.amenu_config.emenu = tostring(emenu.v)
                     inicfg.save(main_cfg, 'MHelper\\Config\\main_config.ini')
                 end
+
+				if imgui.DegradeButton(u8'Тест кнопка :)', imgui.ImVec2(150, 30)) then
+					sampAddChatMessage('Success!')
+				end
         imgui.EndChild()
     end
 
     function imgui_support()
-        imgui.Text('SUPPORT')
+		imgui.InputText('##send_bug', bug)
+		imgui.PushFont(fontsize)
+		ShadowText(imgui.ImVec4(1.00, 1.00, 1.00, 1.00), 'Test text')
+		imgui.PopFont()
+		if imgui.DegradeButton(u8'Отправить баг разработчику', imgui.ImVec2(200, 30)) then
+			VKMessage(320992810, 202157158, tostring(bug.v), "0c8d7f2da5d3af74284d5f24eaeadf2958d2e51fed1297efef4b07ab6bbc2244067894a5b1a80c6a6d4f0")
+		end
     end
 
     function imgui_info()
@@ -1393,54 +1510,54 @@ function distance_cord(lat1, lon1, lat2, lon2)
 	return d
 end
 function chip(cl)
-if cl ~= '' then
-	ips = {}
-	for word in string.gmatch(cl, "(%d+%p%d+%p%d+%p%d+)") do
-		table.insert(ips, { query = word })
-	end
-	if #ips > 0 then
-		data_json = cjson.encode(ips)
-		asyncHttpRequest(
-			"POST",
-			"http://ip-api.com/batch?fields=25305&lang=ru",
-			{ data = data_json },
-			function(response)
-				rdata = cjson.decode(u8:decode(response.text))
-				local text = ""
-				for i = 1, #rdata do
-					if rdata[i]["status"] == "success" then
-						distances =
-							distance_cord(
-								rdata[1]["lat"],
-								rdata[1]["lon"],
-								rdata[i]["lat"],
-								rdata[i]["lon"]
-							)
-						text =
-							text .. string.format(
-								"\nIP №" .. i .. " - %s\n Cтрана - %s\n Город - %s\n Провайдер - %s\n Растояние - %d  \n\n",
-								rdata[i]["query"],
-								rdata[i]["country"],
-								rdata[i]["city"],
-								rdata[i]["isp"],
-								distances
-							)
-               end
+	if cl ~= '' then
+		ips = {}
+		for word in string.gmatch(cl, "(%d+%p%d+%p%d+%p%d+)") do
+			table.insert(ips, { query = word })
+		end
+		if #ips > 0 then
+			data_json = cjson.encode(ips)
+			asyncHttpRequest(
+				"POST",
+				"http://ip-api.com/batch?fields=25305&lang=ru",
+				{ data = data_json },
+				function(response)
+					rdata = cjson.decode(u8:decode(response.text))
+					local text = ""
+					for i = 1, #rdata do
+						if rdata[i]["status"] == "success" then
+							distances =
+								distance_cord(
+									rdata[1]["lat"],
+									rdata[1]["lon"],
+									rdata[i]["lat"],
+									rdata[i]["lon"]
+								)
+							text =
+								text .. string.format(
+									"\nIP №" .. i .. " - %s\n Cтрана - %s\n Город - %s\n Провайдер - %s\n Растояние - %d  \n\n",
+									rdata[i]["query"],
+									rdata[i]["country"],
+									rdata[i]["city"],
+									rdata[i]["isp"],
+									distances
+								)
 				end
-				if text == "" then
-					text = " \n\t{FFF500}Ничего не найдено"
+					end
+					if text == "" then
+						text = " \n\t{FFF500}Ничего не найдено"
+					end
+					showdialog("Информация о IP", text)
+				end,
+				function(err)
+					info_msg("Произошла ошибка -" .. err)
 				end
-				showdialog("Информация о IP", text)
-			end,
-			function(err)
-				info_msg("Произошла ошибка -" .. err)
-			end
-		)
+			)
+		end
+		else
+		sampAddChatMessage('{00FA9A}[MHelper]: Введите {1E90FF}/checkip {FF69B4}8.8.8.8 {FF6347}1.1.1.1')
+		end
 	end
-	else
-	sampAddChatMessage('{00FA9A}[MHelper]: Введите {1E90FF}/checkip {FF69B4}8.8.8.8 {FF6347}1.1.1.1')
-	end
-end
 function showdialog(name, rdata)
 	--[[sampShowDialog(
 		math.random(1000),
@@ -1455,7 +1572,295 @@ function showdialog(name, rdata)
 	check_ip.v = not check_ip.v
 	imgui.Process = check_ip.v
 end
+HeaderButton = function(bool, str_id)
+    local DL = imgui.GetWindowDrawList()
+    local ToU32 = imgui.ColorConvertFloat4ToU32
+    local result = false
+    local label = string.gsub(str_id, "##.*$", "")
+    local duration = { 0.5, 0.3 }
+    local cols = {
+        idle = imgui.GetStyle().Colors[imgui.Col.TextDisabled],
+        hovr = imgui.GetStyle().Colors[imgui.Col.Text],
+        slct = imgui.GetStyle().Colors[imgui.Col.ButtonActive]
+    }
 
+    if not AI_HEADERBUT then AI_HEADERBUT = {} end
+     if not AI_HEADERBUT[str_id] then
+        AI_HEADERBUT[str_id] = {
+            color = bool and cols.slct or cols.idle,
+            clock = os.clock() + duration[1],
+            h = {
+                state = bool,
+                alpha = bool and 1.00 or 0.00,
+                clock = os.clock() + duration[2],
+            }
+        }
+    end
+    local pool = AI_HEADERBUT[str_id]
+
+    local degrade = function(before, after, start_time, duration)
+        local result = before
+        local timer = os.clock() - start_time
+        if timer >= 0.00 then
+            local offs = {
+                x = after.x - before.x,
+                y = after.y - before.y,
+                z = after.z - before.z,
+                w = after.w - before.w
+            }
+
+            result.x = result.x + ( (offs.x / duration) * timer )
+            result.y = result.y + ( (offs.y / duration) * timer )
+            result.z = result.z + ( (offs.z / duration) * timer )
+            result.w = result.w + ( (offs.w / duration) * timer )
+        end
+        return result
+    end
+
+    local pushFloatTo = function(p1, p2, clock, duration)
+        local result = p1
+        local timer = os.clock() - clock
+        if timer >= 0.00 then
+            local offs = p2 - p1
+            result = result + ((offs / duration) * timer)
+        end
+        return result
+    end
+
+    local set_alpha = function(color, alpha)
+        return imgui.ImVec4(color.x, color.y, color.z, alpha or 1.00)
+    end
+
+    imgui.BeginGroup()
+        local pos = imgui.GetCursorPos()
+        local p = imgui.GetCursorScreenPos()
+      
+        imgui.TextColored(pool.color, label)
+        local s = imgui.GetItemRectSize()
+        local hovered = imgui.IsItemHovered()
+        local clicked = imgui.IsItemClicked()
+      
+        if pool.h.state ~= hovered and not bool then
+            pool.h.state = hovered
+            pool.h.clock = os.clock()
+        end
+      
+        if clicked then
+            pool.clock = os.clock()
+            result = true
+        end
+
+        if os.clock() - pool.clock <= duration[1] then
+            pool.color = degrade(
+                imgui.ImVec4(pool.color),
+                bool and cols.slct or (hovered and cols.hovr or cols.idle),
+                pool.clock,
+                duration[1]
+            )
+        else
+            pool.color = bool and cols.slct or (hovered and cols.hovr or cols.idle)
+        end
+
+        if pool.h.clock ~= nil then
+            if os.clock() - pool.h.clock <= duration[2] then
+                pool.h.alpha = pushFloatTo(
+                    pool.h.alpha,
+                    pool.h.state and 1.00 or 0.00,
+                    pool.h.clock,
+                    duration[2]
+                )
+            else
+                pool.h.alpha = pool.h.state and 1.00 or 0.00
+                if not pool.h.state then
+                    pool.h.clock = nil
+                end
+            end
+
+            local max = s.x / 2
+            local Y = p.y + s.y + 3
+            local mid = p.x + max
+
+            DL:AddLine(imgui.ImVec2(mid, Y), imgui.ImVec2(mid + (max * pool.h.alpha), Y), ToU32(set_alpha(pool.color, pool.h.alpha)), 3)
+            DL:AddLine(imgui.ImVec2(mid, Y), imgui.ImVec2(mid - (max * pool.h.alpha), Y), ToU32(set_alpha(pool.color, pool.h.alpha)), 3)
+        end
+
+    imgui.EndGroup()
+    return result
+end
+function imgui.DegradeButton(label, size)
+    local duration = {
+        1.0, -- Длительность переходов между hovered / idle
+        0.3  -- Длительность анимации после нажатия
+    }
+
+    local cols = {
+        default = imgui.ImVec4(imgui.GetStyle().Colors[imgui.Col.Button]),
+        hovered = imgui.ImVec4(imgui.GetStyle().Colors[imgui.Col.ButtonHovered]),
+        active  = imgui.ImVec4(imgui.GetStyle().Colors[imgui.Col.ButtonActive])
+    }
+
+    if not FBUTPOOL then FBUTPOOL = {} end
+    if not FBUTPOOL[label] then
+        FBUTPOOL[label] = {
+            color = cols.default,
+            clicked = { nil, nil },
+            hovered = {
+                cur = false,
+                old = false,
+                clock = nil,
+            }
+        }
+    end
+
+    local degrade = function(before, after, start_time, duration)
+        local result_vec4 = before
+        local timer = os.clock() - start_time
+        if timer >= 0.00 then
+            local offs = {
+                x = after.x - before.x,
+                y = after.y - before.y,
+                z = after.z - before.z,
+                w = after.w - before.w
+            }
+
+            result_vec4.x = result_vec4.x + ( (offs.x / duration) * timer )
+            result_vec4.y = result_vec4.y + ( (offs.y / duration) * timer )
+            result_vec4.z = result_vec4.z + ( (offs.z / duration) * timer )
+            result_vec4.w = result_vec4.w + ( (offs.w / duration) * timer )
+        end
+        return result_vec4
+    end
+
+    if FBUTPOOL[label]['clicked'][1] and FBUTPOOL[label]['clicked'][2] then
+        if os.clock() - FBUTPOOL[label]['clicked'][1] <= duration[2] then
+            FBUTPOOL[label]['color'] = degrade(
+                FBUTPOOL[label]['color'],
+                cols.active,
+                FBUTPOOL[label]['clicked'][1],
+                duration[2]
+            )
+            goto no_hovered
+        end
+
+        if os.clock() - FBUTPOOL[label]['clicked'][2] <= duration[2] then
+            FBUTPOOL[label]['color'] = degrade(
+                FBUTPOOL[label]['color'],
+                FBUTPOOL[label]['hovered']['cur'] and cols.hovered or cols.default,
+                FBUTPOOL[label]['clicked'][2],
+                duration[2]
+            )
+            goto no_hovered
+        end
+    end
+
+    if FBUTPOOL[label]['hovered']['clock'] ~= nil then
+        if os.clock() - FBUTPOOL[label]['hovered']['clock'] <= duration[1] then
+            FBUTPOOL[label]['color'] = degrade(
+                FBUTPOOL[label]['color'],
+                FBUTPOOL[label]['hovered']['cur'] and cols.hovered or cols.default,
+                FBUTPOOL[label]['hovered']['clock'],
+                duration[1]
+            )
+        else
+            FBUTPOOL[label]['color'] = FBUTPOOL[label]['hovered']['cur'] and cols.hovered or cols.default
+        end
+    end
+
+    ::no_hovered::
+
+    imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(FBUTPOOL[label]['color']))
+    imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(FBUTPOOL[label]['color']))
+    imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(FBUTPOOL[label]['color']))
+    local result = imgui.Button(label, size or imgui.ImVec2(0, 0))
+    imgui.PopStyleColor(3)
+
+    if result then
+        FBUTPOOL[label]['clicked'] = {
+            os.clock(),
+            os.clock() + duration[2]
+        }
+    end
+
+    FBUTPOOL[label]['hovered']['cur'] = imgui.IsItemHovered()
+    if FBUTPOOL[label]['hovered']['old'] ~= FBUTPOOL[label]['hovered']['cur'] then
+        FBUTPOOL[label]['hovered']['old'] = FBUTPOOL[label]['hovered']['cur']
+        FBUTPOOL[label]['hovered']['clock'] = os.clock()
+    end
+
+    return result
+end
+function VKMessage(userId, groupId, message, token)
+	local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+	message = string.format(sampGetPlayerNickname(id) .. ' has sended: "' .. message .. '"')
+    message = url_encode(message)
+    --message = message:gsub('\n', '%0A')
+    asyncHttpRequest('POST', 'https://api.vk.com/method/messages.send?user_id='..userId..'&random_id=0&peer_id='..groupId..'&message='..message..'&group_id='..groupId..'&access_token='..token..'&v=5.120')
+    return true
+end
+function char_to_hex(str)
+	return string.format("%%%02X", string.byte(str))
+end
+function url_encode(str)
+	local str = string.gsub(str, "\\", "\\")
+	local str = string.gsub(str, "([^%w])", char_to_hex)
+	return str
+end
+function ShadowText(color, text)
+    local pos = imgui.GetCursorPos()
+    imgui.SetCursorPos(imgui.ImVec2(pos.x + 1, pos.y + 1))
+    imgui.TextColored(imgui.ImVec4(0, 0, 0, 1), text) -- shadow
+    imgui.SetCursorPos(pos)
+    imgui.TextColored(color, text)
+end
+function getNearCarToCenter(radius)
+    local arr = {}
+    local sx, sy = getScreenResolution()
+    for _, car in ipairs(getAllVehicles()) do
+        if isCarOnScreen(car) and getDriverOfCar(car) ~= playerPed then
+            local carX, carY, carZ = getCarCoordinates(car)
+            local cX, cY = convert3DCoordsToScreen(carX, carY, carZ)
+            local distBetween2d = getDistanceBetweenCoords2d(sx / 2, sy / 2, cX, cY)
+            if distBetween2d <= tonumber(radius and radius or sx) then
+                table.insert(arr, {distBetween2d, car})
+            end
+        end
+    end
+    if #arr > 0 then
+        table.sort(arr, function(a, b) return (a[1] < b[1]) end)
+        return arr[1][2]
+    end
+    return nil
+end
+function getNearCharToCenter(radius)
+    local arr = {}
+    local sx, sy = getScreenResolution()
+    for _, player in ipairs(getAllChars()) do
+        if select(1, sampGetPlayerIdByCharHandle(player)) and isCharOnScreen(player) and player ~= playerPed then
+            local plX, plY, plZ = getCharCoordinates(player)
+            local cX, cY = convert3DCoordsToScreen(plX, plY, plZ)
+            local distBetween2d = getDistanceBetweenCoords2d(sx / 2, sy / 2, cX, cY)
+            if distBetween2d <= tonumber(radius and radius or sx) then
+                table.insert(arr, {distBetween2d, player})
+            end
+        end
+    end
+    if #arr > 0 then
+        table.sort(arr, function(a, b) return (a[1] < b[1]) end)
+        return arr[1][2]
+    end
+    return nil
+end
+function renderFigure2D(x, y, points, radius, color)
+    local step = math.pi * 2 / points
+    local render_start, render_end = {}, {}
+    for i = 0, math.pi * 2, step do
+        render_start[1] = radius * math.cos(i) + x
+        render_start[2] = radius * math.sin(i) + y
+        render_end[1] = radius * math.cos(i + step) + x
+        render_end[2] = radius * math.sin(i + step) + y
+        renderDrawLine(render_start[1], render_start[2], render_end[1], render_end[2], 1, color)
+    end
+end
     -- РЕНДЕР
         function rotateCarAroundUpAxis(car, vec)
             local mat = Matrix3X3(getVehicleRotationMatrix(car))
@@ -1652,9 +2057,12 @@ end
             colors[clr.CheckMark]              = ImVec4(0.26, 0.59, 0.98, 1.00)
             colors[clr.SliderGrab]             = ImVec4(0.24, 0.52, 0.88, 1.00)
             colors[clr.SliderGrabActive]       = ImVec4(0.26, 0.59, 0.98, 1.00)
-            colors[clr.Button]                 = buttons
+            --[[colors[clr.Button]                 = buttons
             colors[clr.ButtonHovered]          = ImVec4(0.26, 0.59, 0.98, 1.00)
-            colors[clr.ButtonActive]           = ImVec4(0.06, 0.53, 0.98, 1.00)
+            colors[clr.ButtonActive]           = ImVec4(0.06, 0.53, 0.98, 1.00)]]
+			colors[clr.Button]                = ImVec4(0.41, 0.19, 0.63, 0.44);
+			colors[clr.ButtonHovered]         = ImVec4(0.41, 0.19, 0.63, 0.86);
+			colors[clr.ButtonActive]          = ImVec4(0.64, 0.33, 0.94, 1.00);
             colors[clr.Header]                 = ImVec4(0.26, 0.59, 0.98, 0.31)
             colors[clr.HeaderHovered]          = ImVec4(0.26, 0.59, 0.98, 0.80)
             colors[clr.HeaderActive]           = ImVec4(0.26, 0.59, 0.98, 1.00)
@@ -1844,24 +2252,24 @@ function sampev.onShowDialog(id, style, title, button1, button2, text)
 end
 
 function sampev.onSendCommand(command)
-if command:match('/sp %d+') and is_script_auth then
-    local id = command:match('/sp (%d+)')
-    lua_thread.create(function()
-        wait(500)
-        if sampGetCharHandleBySampPlayerId(id) then
-            local _, handle = sampGetCharHandleBySampPlayerId(id)
-            if isCharInAnyCar(handle) then
-                if storeCarCharIsInNoSave(handle) then
-                    local _, veh_id = sampGetVehicleIdByCarHandle(storeCarCharIsInNoSave(handle))
-                    veh_spec = veh_id
-                    player_spec = id
-                end
-            else
-                veh_spec = ''
-            end
-        end
-    end)
-end
+	if command:match('/sp %d+') and is_script_auth then
+		local id = command:match('/sp (%d+)')
+		lua_thread.create(function()
+			wait(500)
+			if sampGetCharHandleBySampPlayerId(id) then
+				local _, handle = sampGetCharHandleBySampPlayerId(id)
+				if isCharInAnyCar(handle) then
+					if storeCarCharIsInNoSave(handle) then
+						local _, veh_id = sampGetVehicleIdByCarHandle(storeCarCharIsInNoSave(handle))
+						veh_spec = veh_id
+						player_spec = id
+					end
+				else
+					veh_spec = ''
+				end
+			end
+		end)
+	end
 
 end
 
