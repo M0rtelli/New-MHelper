@@ -60,7 +60,7 @@
     encoding.default = 'CP1251'
     u8 = encoding.UTF8 
 	script_name('MHelper')
-	script_version('1.2')
+	script_version('1.3')
 
 -----------[[[[    ПЕРЕМЕННЫЕ    ]]]]-----------
     local main_window_state = imgui.ImBool(false)
@@ -310,88 +310,88 @@
             -- CLICK WARP
 
                 while isPauseMenuActive() do
-                if cursorEnabled then
-                    showCursor(false)
-                end
-                wait(0)
+                    if cursorEnabled then
+                        showCursor(false)
+                    end
+                    wait(0)
                 end
             
                 if isKeyJustPressed(keyToggle) and main_config.amenu_config.clickwarp and is_script_auth then
-                cursorEnabled = not cursorEnabled
-                showCursor(true)
-                while isKeyDown(keyToggle) do wait(0) end
+                    cursorEnabled = not cursorEnabled
+                    showCursor(true)
+                    while isKeyDown(keyToggle) do wait(0) end
                 end
             
                 if cursorEnabled then
-                    if imgui.Process == false then
-                local mode = sampGetCursorMode()
-                if mode == 0 then
-                    showCursor(true)
-                end
-                local sx, sy = getCursorPos()
-                local sw, sh = getScreenResolution()
-                -- is cursor in game window bounds?
-                if sx >= 0 and sy >= 0 and sx < sw and sy < sh then
-                    local posX, posY, posZ = convertScreenCoordsToWorld3D(sx, sy, 700.0)
-                    local camX, camY, camZ = getActiveCameraCoordinates()
-                    -- search for the collision point
-                    local result, colpoint = processLineOfSight(camX, camY, camZ, posX, posY, posZ, true, true, false, true, false, false, false)
-                    if result and colpoint.entity ~= 0 then
-                    local normal = colpoint.normal
-                    local pos = Vector3D(colpoint.pos[1], colpoint.pos[2], colpoint.pos[3]) - (Vector3D(normal[1], normal[2], normal[3]) * 0.1)
-                    local zOffset = 300
-                    if normal[3] >= 0.5 then zOffset = 1 end
-                    -- search for the ground position vertically down
-                    local result, colpoint2 = processLineOfSight(pos.x, pos.y, pos.z + zOffset, pos.x, pos.y, pos.z - 0.3,
-                        true, true, false, true, false, false, false)
-                    if result then
-                        pos = Vector3D(colpoint2.pos[1], colpoint2.pos[2], colpoint2.pos[3] + 1)
-            
-                        local curX, curY, curZ  = getCharCoordinates(playerPed)
-                        local dist              = getDistanceBetweenCoords3d(curX, curY, curZ, pos.x, pos.y, pos.z)
-                        local hoffs             = renderGetFontDrawHeight(font)
-            
-                        sy = sy - 2
-                        sx = sx - 2
-                        renderFontDrawText(font, string.format("%0.2fm", dist), sx, sy - hoffs, 0xEEEEEEEE)
-            
-                        local tpIntoCar = nil
-                        if colpoint.entityType == 2 then
-                        local car = getVehiclePointerHandle(colpoint.entity)
-                        if doesVehicleExist(car) and (not isCharInAnyCar(playerPed) or storeCarCharIsInNoSave(playerPed) ~= car) then
-                            displayVehicleName(sx, sy - hoffs * 2, getNameOfVehicleModel(getCarModel(car)))
-                            local color = 0xAAFFFFFF
-                            if isKeyDown(VK_RBUTTON) then
-                            tpIntoCar = car
-                            color = 0xFFFFFFFF
+                        if imgui.Process == false then
+                    local mode = sampGetCursorMode()
+                    if mode == 0 then
+                        showCursor(true)
+                    end
+                    local sx, sy = getCursorPos()
+                    local sw, sh = getScreenResolution()
+                    -- is cursor in game window bounds?
+                    if sx >= 0 and sy >= 0 and sx < sw and sy < sh then
+                        local posX, posY, posZ = convertScreenCoordsToWorld3D(sx, sy, 700.0)
+                        local camX, camY, camZ = getActiveCameraCoordinates()
+                        -- search for the collision point
+                        local result, colpoint = processLineOfSight(camX, camY, camZ, posX, posY, posZ, true, true, false, true, false, false, false)
+                        if result and colpoint.entity ~= 0 then
+                        local normal = colpoint.normal
+                        local pos = Vector3D(colpoint.pos[1], colpoint.pos[2], colpoint.pos[3]) - (Vector3D(normal[1], normal[2], normal[3]) * 0.1)
+                        local zOffset = 300
+                        if normal[3] >= 0.5 then zOffset = 1 end
+                        -- search for the ground position vertically down
+                        local result, colpoint2 = processLineOfSight(pos.x, pos.y, pos.z + zOffset, pos.x, pos.y, pos.z - 0.3,
+                            true, true, false, true, false, false, false)
+                        if result then
+                            pos = Vector3D(colpoint2.pos[1], colpoint2.pos[2], colpoint2.pos[3] + 1)
+                
+                            local curX, curY, curZ  = getCharCoordinates(playerPed)
+                            local dist              = getDistanceBetweenCoords3d(curX, curY, curZ, pos.x, pos.y, pos.z)
+                            local hoffs             = renderGetFontDrawHeight(font)
+                
+                            sy = sy - 2
+                            sx = sx - 2
+                            renderFontDrawText(font, string.format("%0.2fm", dist), sx, sy - hoffs, 0xEEEEEEEE)
+                
+                            local tpIntoCar = nil
+                            if colpoint.entityType == 2 then
+                            local car = getVehiclePointerHandle(colpoint.entity)
+                            if doesVehicleExist(car) and (not isCharInAnyCar(playerPed) or storeCarCharIsInNoSave(playerPed) ~= car) then
+                                displayVehicleName(sx, sy - hoffs * 2, getNameOfVehicleModel(getCarModel(car)))
+                                local color = 0xAAFFFFFF
+                                if isKeyDown(VK_RBUTTON) then
+                                tpIntoCar = car
+                                color = 0xFFFFFFFF
+                                end
+                                renderFontDrawText(font2, "Hold right mouse button to teleport into the car", sx, sy - hoffs * 3, color)
                             end
-                            renderFontDrawText(font2, "Hold right mouse button to teleport into the car", sx, sy - hoffs * 3, color)
-                        end
-                        end
-            
-                        createPointMarker(pos.x, pos.y, pos.z)
-            
-                        -- teleport!
-                        if isKeyDown(keyApply) then
-                        if tpIntoCar then
-                            if not jumpIntoCar(tpIntoCar) then
-                            -- teleport to the car if there is no free seats
-                            teleportPlayer(pos.x, pos.y, pos.z)
                             end
-                        else
-                            if isCharInAnyCar(playerPed) then
-                            local norm = Vector3D(colpoint.normal[1], colpoint.normal[2], 0)
-                            local norm2 = Vector3D(colpoint2.normal[1], colpoint2.normal[2], colpoint2.normal[3])
-                            rotateCarAroundUpAxis(storeCarCharIsInNoSave(playerPed), norm2)
-                            pos = pos - norm * 1.8
-                            pos.z = pos.z - 0.8
+                
+                            createPointMarker(pos.x, pos.y, pos.z)
+                
+                            -- teleport!
+                            if isKeyDown(keyApply) then
+                            if tpIntoCar then
+                                if not jumpIntoCar(tpIntoCar) then
+                                -- teleport to the car if there is no free seats
+                                teleportPlayer(pos.x, pos.y, pos.z)
+                                end
+                            else
+                                if isCharInAnyCar(playerPed) then
+                                local norm = Vector3D(colpoint.normal[1], colpoint.normal[2], 0)
+                                local norm2 = Vector3D(colpoint2.normal[1], colpoint2.normal[2], colpoint2.normal[3])
+                                rotateCarAroundUpAxis(storeCarCharIsInNoSave(playerPed), norm2)
+                                pos = pos - norm * 1.8
+                                pos.z = pos.z - 0.8
+                                end
+                                teleportPlayer(pos.x, pos.y, pos.z)
                             end
-                            teleportPlayer(pos.x, pos.y, pos.z)
-                        end
-                        removePointMarker()
-            
-                        while isKeyDown(keyApply) do wait(0) end
-                        showCursor(false)
+                            removePointMarker()
+                
+                            while isKeyDown(keyApply) do wait(0) end
+                            showCursor(false)
                         end
                     end
                     end
@@ -404,7 +404,11 @@
                 if isKeyJustPressed(VK_6) and not sampIsChatInputActive() and not sampIsDialogActive() and is_script_auth then
 					imgui.ShowCursor = not imgui.ShowCursor
 					showCursor(imgui.ShowCursor)
-					end
+				end
+
+                if sampIsLocalPlayerSpawned() then
+					is_auth = true
+				end
 				
 				if isKeyJustPressed(VK_U) and not sampIsChatInputActive() and not sampIsDialogActive() and is_script_auth then
 					sampSetChatInputEnabled(true)
@@ -414,6 +418,14 @@
 				if isKeyJustPressed(52) and not sampIsChatInputActive() then
 					dialog_status = not sampIsDialogActive()
                     enableDialog(not sampIsDialogActive())
+                end
+
+                    -- добавить включение тексдравов в /amenu
+
+                for i = 151, 168 do
+                    if sampTextdrawIsExists(i) then
+                        sampTextdrawDelete(i)
+                    end
                 end
 				
             end
@@ -820,11 +832,11 @@
 							wait(650)
 							sampSendChat('/goto ' .. player_spec)
 						else
-							sampSendChat('/spoff')
-							wait(650)
-							local _, handle = sampGetCharHandleBySampPlayerId(player_spec)
+                            local _, handle = sampGetCharHandleBySampPlayerId(player_spec)
 							local x, y, z = getCharCoordinates(handle)
 							local interior = getCharActiveInterior(handle)
+							sampSendChat('/spoff')
+							wait(650)
 							setCharInterior(PLAYER_PED,interior_id)
 							setInteriorVisible(interior_id)
 							clearExtraColours(true)
@@ -2213,7 +2225,6 @@ end
 -----------[[[[    ХУКИ    ]]]]-----------
 function sampev.onShowDialog(id, style, title, button1, button2, text)
     if title:match('Ответ') and is_script_auth then
-		
 		report_id = ''
 		id_dialog_report = id
 		info_msg(id_dialog_report)
